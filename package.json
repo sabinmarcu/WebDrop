@@ -1,0 +1,26 @@
+{
+	"name" :  "gesturili",
+	"version" :  "0.0.1",
+	"author" :  {
+		"name": "Sabin Marcu",
+		"email": "sabinmarcu@gmail.com"
+	},
+	"dependencies" :  {
+		"coffee-script" :  "*",
+		"cliparser" :  "*",
+		"express" :  "2.5.0",
+		"isf" :  "*",
+		"codo" :  "*",
+		"stitchw" :  "*"
+	},
+	"devDependencies" :  {
+		"jasmine-node" :  "*"
+	},
+	"scripts" :  {
+		"create-dir-structure" :  "mkdir lib src spec bin",
+		"compile" :  "node node_modules/.bin/coffee -c -o lib src",
+		"run-tests" :  "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+		"test" :  "npm run-script compile && npm run-script run-tests"
+	},
+	"main" :  "./lib/script.js"
+}
