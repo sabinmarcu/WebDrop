@@ -1,0 +1,4 @@
+<form id="loginForm" name="nameSelection" action="" method="GET">
+	<label for="name">Give us your name, so we can <br>sign you up!</label>
+	<input id="name" type="text" value="" placeholder="Name?" />
+</form>

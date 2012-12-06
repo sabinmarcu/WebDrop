@@ -1010,7 +1010,32 @@ Dual licensed under the MIT and GPL licenses.
 
   Application = (function() {
 
-    function Application() {}
+    function Application(name) {
+      document.body.innerHTML = require("views/login")();
+      this.styles = require("styles/base");
+      document.getElementById("loginForm").onsubmit = function(e) {
+        document.body.innerHTML = (require("views/game"))({
+          name: e.srcElement[0].value
+        });
+        require("classes/Renderer")();
+        document.onresize = function() {
+          var canvas;
+          canvas = document.getElementById("gameCanvas");
+          canvas.height = window.innerHeight;
+          return require("classes/Renderer")();
+        };
+        document.onresize();
+        return e.preventDefault();
+      };
+      document.getElementById("loginForm").onsubmit({
+        srcElement: [
+          {
+            value: "Sabin"
+          }
+        ],
+        preventDefault: function() {}
+      });
+    }
 
     return Application;
 
@@ -1019,4 +1044,233 @@ Dual licensed under the MIT and GPL licenses.
   module.exports = Application;
 
 }).call(this);
-}});
+}, "classes/Renderer": function(exports, require, module) {(function() {
+  var Renderer, RendererErrorReporter, activated, offset,
+    __hasProp = {}.hasOwnProperty,
+    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+
+  Renderer = (function(_super) {
+
+    __extends(Renderer, _super);
+
+    function Renderer() {
+      return Renderer.__super__.constructor.apply(this, arguments);
+    }
+
+    Renderer.activate = function() {
+      this.canvas = document.getElementById("gameCanvas");
+      if (!this.canvas) {
+        throw RendererErrorReporter.generate(1);
+      }
+      this.canvas = this.canvas.getContext("2d");
+      this.getCanvasSize();
+      return setInterval(this.proxy(this.draw, this), 100);
+    };
+
+    Renderer.getCanvasSize = function() {
+      var canvas, size;
+      canvas = document.getElementById("gameCanvas");
+      size = {
+        x: canvas.width,
+        y: canvas.height
+      };
+      return this.canvas.size = size;
+    };
+
+    Renderer.draw = function() {
+      var offset;
+      this.drawBackground();
+      if (offset = 250) {
+        offset = 0;
+      }
+      this.drawBar(100 - offset, 50);
+      this.drawBar(200, 55);
+      this.drawBar(300, 75);
+      this.drawBar(400, 100);
+      this.drawBar(500, 150);
+      this.drawBar(600, 225);
+      this.drawBar(700, 200);
+      this.drawBar(800, 125);
+      offset++;
+      return this.drawShadows();
+    };
+
+    Renderer.drawBar = function(y, xGap) {
+      var gradient;
+      gradient = this.canvas.createLinearGradient(0, y, 0, y + 10);
+      gradient.addColorStop(0, "rgba(0, 30, 256, 0.5)");
+      gradient.addColorStop(1, "rgba(0, 30, 256, 0.1)");
+      this.canvas.fillStyle = gradient;
+      this.canvas.fillRect(0, y, xGap - 15, 10);
+      return this.canvas.fillRect(xGap + 15, y, this.canvas.size.x, 10);
+    };
+
+    Renderer.drawBackground = function() {
+      this.canvas.fillStyle = "f6f6f6";
+      return this.canvas.fillRect(0, 0, this.canvas.size.x, this.canvas.size.y);
+    };
+
+    Renderer.drawShadows = function() {
+      var gradient;
+      gradient = this.canvas.createLinearGradient(0, 0, 0, 50);
+      gradient.addColorStop(0, "rgba(506, 506, 506, 1)");
+      gradient.addColorStop(1, "rgba(506, 506, 506, 0)");
+      this.canvas.fillStyle = gradient;
+      this.canvas.fillRect(0, 0, this.canvas.size.x, 50);
+      gradient = this.canvas.createLinearGradient(0, this.canvas.size.y - 50, 0, this.canvas.size.y);
+      gradient.addColorStop(0, "rgba(506, 506, 506, 0)");
+      gradient.addColorStop(1, "rgba(506, 506, 506, 1)");
+      this.canvas.fillStyle = gradient;
+      this.canvas.fillRect(0, this.canvas.size.y - 50, this.canvas.size.x, this.canvas.size.y);
+      gradient = this.canvas.createLinearGradient(0, 0, 50, 0);
+      gradient.addColorStop(0, "rgba(506, 506, 506, 1)");
+      gradient.addColorStop(1, "rgba(506, 506, 506, 0)");
+      this.canvas.fillStyle = gradient;
+      this.canvas.fillRect(0, 0, 50, this.canvas.size.y);
+      gradient = this.canvas.createLinearGradient(this.canvas.size.x - 50, 0, this.canvas.size.x, 0);
+      gradient.addColorStop(0, "rgba(506, 506, 506, 0)");
+      gradient.addColorStop(1, "rgba(506, 506, 506, 1)");
+      this.canvas.fillStyle = gradient;
+      return this.canvas.fillRect(this.canvas.size.x - 50, 0, this.canvas.size.x, this.canvas.size.y);
+    };
+
+    return Renderer;
+
+  })(IS.Object);
+
+  RendererErrorReporter = (function(_super) {
+
+    __extends(RendererErrorReporter, _super);
+
+    function RendererErrorReporter() {
+      return RendererErrorReporter.__super__.constructor.apply(this, arguments);
+    }
+
+    RendererErrorReporter.errorGroups = ["CanvasError"];
+
+    RendererErrorReporter.errorGroupMap = [1];
+
+    RendererErrorReporter.errorMessages = ["The canvas could not be hooked"];
+
+    RendererErrorReporter.extend(IS.ErrorReporter);
+
+    return RendererErrorReporter;
+
+  })(IS.Object);
+
+  window._r = Renderer;
+
+  activated = false;
+
+  offset = 0;
+
+  module.exports = function() {
+    switch (activated) {
+      case false:
+        Renderer.proxy(Renderer.activate, Renderer)();
+        return activated = true;
+      case true:
+        return Renderer.proxy(Renderer.getCanvasSize, Renderer)();
+    }
+  };
+
+}).call(this);
+}, "styles/base": function(exports, require, module) {s = document.createElement('style'); s.innerHTML = "html,\nbody {\n  margin: 0;\n  padding: 0;\n  font-size: 10pt;\n  height: 100%;\n  width: 100%;\n}\nbody {\n  overflow: hidden;\n  background: white;\n  color: #444;\n}\nbody form {\n  position: fixed;\n  left: 50%;\n  top: 50%;\n  height: 200px;\n  width: 400px;\n  margin: -100px 0 0 -200px;\n  background: #ccc;\n  background: -webkit-gradient(linear, left top, left bottom, color-stop(0.5, #ffffff), color-stop(1, #eeeeee));\n  border-radius: 20px;\n}\nbody form label {\n  font-size: 17pt;\n  display: block;\n  clear: both;\n  text-align: center;\n  margin: 20px 0 40px;\n}\nbody form input {\n  display: block;\n  margin: 0 30px;\n  width: 310px;\n  height: 20px;\n  padding: 15px;\n  background: transparent;\n  border: solid 1px #ccc;\n  border-radius: 5px;\n  outline: none;\n  -webkit-transition: all 0.5s ease-in-out;\n}\nbody form input:hover,\nbody form input:active,\nbody form input:focus {\n  background: rgba(256, 256, 256, 0.8);\n}\nsection {\n  width: 900px;\n  margin: 0 auto;\n  height: 100%;\n}\nsection article {\n  width: 150px;\n  float: left;\n  padding: 50px 25px;\n  height: 100%;\n}\nsection article h1 {\n  font-size: 21pt;\n}\nsection article#playerInfoZone {\n  text-align: right;\n}\nsection article#renderZone {\n  width: 500px;\n  padding: 0;\n}\nsection article#renderZone canvas {\n  width: 100%;\n  height: 100%;\n}\nsection article#menuZone li {\n  list-style: none;\n  font-size: 16pt;\n  color: #ccc;\n  -webkit-transition: all 0.25s ease-in-out;\n  cursor: pointer;\n}\nsection article#menuZone li:hover {\n  color: #222;\n}\n"; s.id = "css-base"; document.head.appendChild(s);}, "views/game": function(exports, require, module) {module.exports = function(__obj) {
+  if (!__obj) __obj = {};
+  var __out = [], __capture = function(callback) {
+    var out = __out, result;
+    __out = [];
+    callback.call(this);
+    result = __out.join('');
+    __out = out;
+    return __safe(result);
+  }, __sanitize = function(value) {
+    if (value && value.ecoSafe) {
+      return value;
+    } else if (typeof value !== 'undefined' && value != null) {
+      return __escape(value);
+    } else {
+      return '';
+    }
+  }, __safe, __objSafe = __obj.safe, __escape = __obj.escape;
+  __safe = __obj.safe = function(value) {
+    if (value && value.ecoSafe) {
+      return value;
+    } else {
+      if (!(typeof value !== 'undefined' && value != null)) value = '';
+      var result = new String(value);
+      result.ecoSafe = true;
+      return result;
+    }
+  };
+  if (!__escape) {
+    __escape = __obj.escape = function(value) {
+      return ('' + value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    };
+  }
+  (function() {
+    (function() {
+    
+      __out.push('<section>\n\t<article id="playerInfoZone">\n\t\t<h1 id="playerName">');
+    
+      __out.push(__sanitize(this.name));
+    
+      __out.push('</h1>\n\t\t<h4 id="sessionScore"></h4>\n\t</article>\n\t<article id="renderZone"><canvas id="gameCanvas"></canvas></article>\n\t<article id="menuZone">\n\t\t\t<h1>Menu</h1>\n\t\t\t<nav id="menuList">\n\t\t\t\t<li class="menuButton" id="newGameButton">New Game</li>\n\t\t\t\t<li class="menuButton" id="resetScoreButton">Reset Score</li>\n\t\t\t\t<li class="menuButton" id="pauseGameButton">Pause Game</li>\n\t\t\t\t<li class="menuButton" id="exitGameButton">Exit Game</li>\n\t\t\t</nav>\n\t</article>\n</section>\n');
+    
+    }).call(this);
+    
+  }).call(__obj);
+  __obj.safe = __objSafe, __obj.escape = __escape;
+  return __out.join('');
+}}, "views/login": function(exports, require, module) {module.exports = function(__obj) {
+  if (!__obj) __obj = {};
+  var __out = [], __capture = function(callback) {
+    var out = __out, result;
+    __out = [];
+    callback.call(this);
+    result = __out.join('');
+    __out = out;
+    return __safe(result);
+  }, __sanitize = function(value) {
+    if (value && value.ecoSafe) {
+      return value;
+    } else if (typeof value !== 'undefined' && value != null) {
+      return __escape(value);
+    } else {
+      return '';
+    }
+  }, __safe, __objSafe = __obj.safe, __escape = __obj.escape;
+  __safe = __obj.safe = function(value) {
+    if (value && value.ecoSafe) {
+      return value;
+    } else {
+      if (!(typeof value !== 'undefined' && value != null)) value = '';
+      var result = new String(value);
+      result.ecoSafe = true;
+      return result;
+    }
+  };
+  if (!__escape) {
+    __escape = __obj.escape = function(value) {
+      return ('' + value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    };
+  }
+  (function() {
+    (function() {
+    
+      __out.push('<form id="loginForm" name="nameSelection" action="" method="GET">\n\t<label for="name">Give us your name, so we can <br>sign you up!</label>\n\t<input id="name" type="text" value="" placeholder="Name?" />\n</form>\n');
+    
+    }).call(this);
+    
+  }).call(__obj);
+  __obj.safe = __objSafe, __obj.escape = __escape;
+  return __out.join('');
+}}});

@@ -1,0 +1,16 @@
+<section>
+	<article id="playerInfoZone">
+		<h1 id="playerName"><%= @name %></h1>
+		<h4 id="sessionScore"></h4>
+	</article>
+	<article id="renderZone"><canvas id="gameCanvas"></canvas></article>
+	<article id="menuZone">
+			<h1>Menu</h1>
+			<nav id="menuList">
+				<li class="menuButton" id="newGameButton">New Game</li>
+				<li class="menuButton" id="resetScoreButton">Reset Score</li>
+				<li class="menuButton" id="pauseGameButton">Pause Game</li>
+				<li class="menuButton" id="exitGameButton">Exit Game</li>
+			</nav>
+	</article>
+</section>
