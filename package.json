@@ -26,7 +26,7 @@
 		"create-dir-structure" :  "mkdir lib src spec bin",
 		"compile" :  "node node_modules/.bin/coffee -c -o lib src",
 		"run-tests" :  "node node_modules/.bin/jasmine-node --coffee --noColor spec",
-		"test" :  "npm run-script compile && npm run-script run-tests"
+		"test" :  "npm run-script compile && npm run-script run-tests",
 		"start": "node server -s"
 	},
 	"main" :  "./lib/script.js"
