@@ -49,7 +49,7 @@ class Server
 		catch e then return throw ServerErrorReporter.generate 8, ServerErrorReporter.wrapCustomError e
 
 		# Finally launch the server
-		App.listen @port, @address
+		App.listen @port
 		console.log "Started the static server on address : #{@address}, and port : #{@port}"
 		console.log "Instant compiling is enabled." if @compiler
 		@

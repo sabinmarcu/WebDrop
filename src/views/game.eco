@@ -11,6 +11,18 @@
 				<li class="menuButton" id="resetScoreButton">Reset Score</li>
 				<li class="menuButton" id="pauseGameButton">Pause Game</li>
 				<li class="menuButton" id="exitGameButton">Exit Game</li>
+				<br />
+				<br />
+				<li id="devOptions" class="menuButton">
+					<select id="ballColors" name="ballColors">
+						<% for color, values of @colors : %>
+						<option value="<%= color %>" <%= "selected" if color is "red" %>><%= color.substr(0, 1).toUpperCase() + color.substr(1) %></option>
+						<% end %>
+					</select>
+					<input id="speedControl" type="number" value="<%= @baseSpeed %>" />
+					<input id="frequencyControl" type="number" value="<%= @baseFrequency %>" />
+					<input id="filterControl" type="number" step="0.1" value="<%= @baseFilter %>" />
+				</li>
 			</nav>
 	</article>
 </section>

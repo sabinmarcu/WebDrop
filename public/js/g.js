@@ -1006,28 +1006,66 @@ Dual licensed under the MIT and GPL licenses.
   }
   return this.require.define;
 }).call(this)({"Application": function(exports, require, module) {(function() {
-  var Application;
+  var Application, colors;
+
+  colors = {
+    "blue": {
+      from: "#8ED6FF",
+      to: "#004CB3"
+    },
+    "red": {
+      from: "rgba(256, 20, 80, 0.8)",
+      to: "rgba(150, 10, 30, 1)"
+    }
+  };
 
   Application = (function() {
 
     function Application(name) {
+      var link;
       document.body.innerHTML = require("views/login")();
       this.styles = require("styles/base");
-      document.getElementById("loginForm").onsubmit = function(e) {
-        document.body.innerHTML = (require("views/game"))({
-          name: e.srcElement[0].value
-        });
-        require("classes/Renderer")();
-        document.onresize = function() {
-          var canvas;
-          canvas = document.getElementById("gameCanvas");
-          canvas.height = window.innerHeight;
-          return require("classes/Renderer")();
-        };
-        document.onresize();
-        return e.preventDefault();
+      document.getElementById("loginForm").onsubmit = Application.loadApplication;
+      link = document.createElement("link");
+      link.setAttribute("rel", "stylesheet");
+      link.setAttribute("type", "text/css");
+      link.href = "http://fonts.googleapis.com/css?family=Yanone+Kaffeesatz:200";
+      document.head.appendChild(link);
+    }
+
+    Application.loadApplication = function(e) {
+      document.body.innerHTML = (require("views/game"))({
+        name: e.srcElement[0].value,
+        colors: colors,
+        baseSpeed: 15,
+        baseFrequency: 150,
+        baseFilter: 0.5
+      });
+      (require("classes/Renderer"))("activate", colors);
+      document.onresize = function() {
+        var canvas;
+        canvas = document.getElementById("gameCanvas");
+        canvas.height = window.innerHeight;
+        return (require("classes/Renderer"))("canvasUpdate");
       };
-      document.getElementById("loginForm").onsubmit({
+      document.onresize();
+      (document.getElementById("exitGameButton")).onclick = function() {
+        return (require("classes/Engine"))("exit");
+      };
+      (document.getElementById("newGameButton")).onclick = function() {
+        return (require("classes/Engine"))("start");
+      };
+      (document.getElementById("resetScoreButton")).onclick = function() {
+        return (require("classes/Engine"))("reset");
+      };
+      (document.getElementById("pauseGameButton")).onclick = function() {
+        return (require("classes/Engine"))("pause");
+      };
+      return e.preventDefault();
+    };
+
+    Application.fakeLogin = function() {
+      return document.getElementById("loginForm").onsubmit({
         srcElement: [
           {
             value: "Sabin"
@@ -1035,19 +1073,264 @@ Dual licensed under the MIT and GPL licenses.
         ],
         preventDefault: function() {}
       });
-    }
+    };
 
     return Application;
 
-  })();
+  }).call(this);
 
   module.exports = Application;
 
 }).call(this);
-}, "classes/Renderer": function(exports, require, module) {(function() {
-  var Renderer, RendererErrorReporter, activated, offset,
+}, "classes/Bar": function(exports, require, module) {(function() {
+  var Bar;
+
+  Bar = (function() {
+
+    function Bar(offset) {
+      console.log("New Bar");
+      this.xGap = Math.floor(Math.random() * 210 + offset);
+      if (this.xGap < 70) {
+        this.xGap = 70;
+      }
+      if (this.xGap > 230) {
+        this.xGap = 230;
+      }
+      this.y = 0;
+    }
+
+    Bar.prototype.animate = function() {
+      return this.y++;
+    };
+
+    Bar.prototype.uncover = function() {
+      return {
+        y: this.y,
+        xGap: this.xGap
+      };
+    };
+
+    return Bar;
+
+  })();
+
+  module.exports = Bar;
+
+}).call(this);
+}, "classes/Engine": function(exports, require, module) {(function() {
+  var Engine, EngineErrorReporter, movement,
     __hasProp = {}.hasOwnProperty,
-    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
+    __slice = [].slice;
+
+  movement = 0;
+
+  Engine = (function(_super) {
+
+    __extends(Engine, _super);
+
+    function Engine() {
+      return Engine.__super__.constructor.apply(this, arguments);
+    }
+
+    Engine.bars = [];
+
+    Engine.ball = {};
+
+    Engine.score = 0;
+
+    Engine.reset = function() {
+      this.bars = [];
+      this.ball = {};
+      this.score = 0;
+      return (document.getElementById("sessionScore")).innerHTML = "";
+    };
+
+    Engine.New = function(speed) {
+      if (speed == null) {
+        speed = null;
+      }
+      this.speed = (document.getElementById("speedControl")).value;
+      this.genFreq = (document.getElementById("frequencyControl")).value;
+      this.ball = {
+        x: 150,
+        y: 30,
+        ax: 0,
+        ay: 0
+      };
+      this.generate();
+      if (this.animateTimer != null) {
+        window.clearInterval(this.animateTimer);
+      }
+      if (this.generateTimer != null) {
+        window.clearInterval(this.generateTimer);
+      }
+      this.animateTimer = setInterval(this.proxy(this.tick, this), this.speed);
+      return this.generateTimer = setInterval(this.proxy(this.generate, this), this.speed * this.genFreq);
+    };
+
+    Engine.tick = function() {
+      var bar, _i, _len, _ref, _results;
+      if ((this.bars[0] != null) && this.bars[0].x >= window.innerHeight) {
+        this.bars.shift();
+      }
+      this.accelerateBall();
+      this.moveBallX();
+      this.moveBallY();
+      if (this.ball.y === 10) {
+        alert("GAME OVER : Your Score is " + this.score);
+        this.reset();
+      }
+      _ref = this.bars;
+      _results = [];
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        bar = _ref[_i];
+        _results.push(bar.animate());
+      }
+      return _results;
+    };
+
+    Engine.accelerateBall = function() {
+      var filter;
+      if (!(this.ball.x != null)) {
+        return;
+      }
+      filter = (document.getElementById("filterControl")).value * 1;
+      this.ball.ax += filter * movement;
+      if (this.ball.ay <= 5) {
+        return this.ball.ay += filter * 0.15;
+      }
+    };
+
+    Engine.moveBallX = function() {
+      this.ball.x += this.ball.ax;
+      if (this.ball.x < 15) {
+        this.ball.ax -= 3 * this.ball.ax;
+        this.ball.x = 15;
+      }
+      if (this.ball.x > 285) {
+        this.ball.ax -= 3 * this.ball.ax;
+        this.ball.x = 285;
+      }
+      return this.ball.ax *= 0.85;
+    };
+
+    Engine.moveBallY = function() {
+      var bar, s, w, xcond, ycond, _i, _len, _ref, _results;
+      w = window.innerHeight / 1.6;
+      this.ball.y += this.ball.ay;
+      if (this.ball.y > w - 15) {
+        this.ball.y = w - 10;
+      }
+      _ref = this.bars;
+      _results = [];
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        bar = _ref[_i];
+        if ((this.ball.skipbar != null) && this.ball.skipbar === bar) {
+          continue;
+        }
+        s = window.innerHeight - bar.y;
+        s = s / 1.6 - 15;
+        ycond = this.ball.y >= s && this.ball.y <= s + 15;
+        xcond = !(this.ball.x >= bar.xGap - 16 && this.ball.x <= bar.xGap + 16);
+        if (!xcond && ycond) {
+          this.ball.skipbar = bar;
+          this.score += 10;
+          this.updateScore();
+        }
+        if (ycond && xcond) {
+          this.ball.y = s;
+          _results.push(this.ball.ay -= this.ball.ay * 1.7);
+        } else {
+          _results.push(void 0);
+        }
+      }
+      return _results;
+    };
+
+    Engine.generate = function() {
+      return this.bars.push(new (require("classes/Bar"))(Math.floor(Math.random() * 25)));
+    };
+
+    Engine.uncover = function(what) {
+      return this[what];
+    };
+
+    Engine.updateScore = function() {
+      return (document.getElementById("sessionScore")).innerHTML = this.score;
+    };
+
+    return Engine;
+
+  })(IS.Object);
+
+  EngineErrorReporter = (function(_super) {
+
+    __extends(EngineErrorReporter, _super);
+
+    function EngineErrorReporter() {
+      return EngineErrorReporter.__super__.constructor.apply(this, arguments);
+    }
+
+    EngineErrorReporter.errorGroups = ["ProcedureError"];
+
+    EngineErrorReporter.errorGroupMap = [1];
+
+    EngineErrorReporter.errorMessages = ["Unknown Procedure"];
+
+    EngineErrorReporter.extend(IS.ErrorReporter);
+
+    return EngineErrorReporter;
+
+  })(IS.Object);
+
+  window._e = Engine;
+
+  window.onkeydown = function(e) {
+    switch (e.keyCode) {
+      case 37:
+        return movement = -1;
+      case 39:
+        return movement = 1;
+    }
+  };
+
+  window.onkeyup = function() {
+    return movement = 0;
+  };
+
+  module.exports = function() {
+    var args, what;
+    what = arguments[0], args = 2 <= arguments.length ? __slice.call(arguments, 1) : [];
+    switch (what) {
+      case "reset":
+        return console.log("Reset Score Stub");
+      case "start":
+        Engine.reset();
+        return Engine.New();
+      case "pause":
+        return alert("Press OK when you wanna return to the game!");
+      case "exit":
+        if (confirm("Do you really wanna close?")) {
+          window.open("", "_self", "");
+          return window.close();
+        }
+        break;
+      case "uncover":
+        return Engine.uncover.apply(Engine, args);
+    }
+  };
+
+}).call(this);
+}, "classes/Renderer": function(exports, require, module) {(function() {
+  var Renderer, RendererErrorReporter, reqAnimFrame,
+    __hasProp = {}.hasOwnProperty,
+    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
+    __slice = [].slice;
+
+  reqAnimFrame = window.requestAnimationFrame || window.webkitRequestAnimationFrame || window.mozRequestAnimationFrame || window.oRequestAnimationFrame || window.msRequestAnimationFrame || function(callback) {
+    return setTimeout(callback, 1000 / 60);
+  };
 
   Renderer = (function(_super) {
 
@@ -1057,14 +1340,28 @@ Dual licensed under the MIT and GPL licenses.
       return Renderer.__super__.constructor.apply(this, arguments);
     }
 
-    Renderer.activate = function() {
+    Renderer.activate = function(colors) {
+      var _this = this;
+      this.colors = colors;
+      this.color = "red";
       this.canvas = document.getElementById("gameCanvas");
       if (!this.canvas) {
         throw RendererErrorReporter.generate(1);
       }
       this.canvas = this.canvas.getContext("2d");
+      if (!this.canvas) {
+        throw RendererErrorReporter.generate(2);
+      }
+      (document.getElementById("ballColors")).onchange = function(e) {
+        return _this.color = e.srcElement.value;
+      };
       this.getCanvasSize();
-      return setInterval(this.proxy(this.draw, this), 100);
+      return this.loop();
+    };
+
+    Renderer.loop = function() {
+      reqAnimFrame(this.proxy(this.loop, this));
+      return this.draw();
     };
 
     Renderer.getCanvasSize = function() {
@@ -1078,60 +1375,80 @@ Dual licensed under the MIT and GPL licenses.
     };
 
     Renderer.draw = function() {
-      var offset;
       this.drawBackground();
-      if (offset = 250) {
-        offset = 0;
-      }
-      this.drawBar(100 - offset, 50);
-      this.drawBar(200, 55);
-      this.drawBar(300, 75);
-      this.drawBar(400, 100);
-      this.drawBar(500, 150);
-      this.drawBar(600, 225);
-      this.drawBar(700, 200);
-      this.drawBar(800, 125);
-      offset++;
+      this.drawBars();
+      this.drawBall();
       return this.drawShadows();
     };
 
-    Renderer.drawBar = function(y, xGap) {
-      var gradient;
+    Renderer.drawBall = function() {
+      var ball, gradient, x, y;
+      ball = (require("classes/Engine"))("uncover", "ball");
+      if (!(ball.x != null) || !ball.x) {
+        return;
+      }
+      x = ball.x;
+      y = ball.y;
+      this.canvas.save();
+      this.canvas.scale(1, 1.6);
+      gradient = this.canvas.createRadialGradient(x - 3, y - 3, 0, x, y, 15);
+      gradient.addColorStop(0, this.colors[this.color].from);
+      gradient.addColorStop(1, this.colors[this.color].to);
+      this.canvas.fillStyle = gradient;
+      this.canvas.beginPath();
+      this.canvas.arc(x, y, 15, 0, Math.PI * 2, false);
+      this.canvas.fill();
+      this.canvas.closePath();
+      return this.canvas.restore();
+    };
+
+    Renderer.drawBars = function() {
+      var bar, bars, _i, _len, _results;
+      bars = (require("classes/Engine"))("uncover", "bars");
+      if (!bars.length) {
+        return;
+      }
+      _results = [];
+      for (_i = 0, _len = bars.length; _i < _len; _i++) {
+        bar = bars[_i];
+        _results.push(this.drawBar(bar));
+      }
+      return _results;
+    };
+
+    Renderer.drawBar = function(bar) {
+      var gradient, xGap, y;
+      y = this.canvas.size.y - bar.y;
+      xGap = bar.xGap;
       gradient = this.canvas.createLinearGradient(0, y, 0, y + 10);
       gradient.addColorStop(0, "rgba(0, 30, 256, 0.5)");
       gradient.addColorStop(1, "rgba(0, 30, 256, 0.1)");
       this.canvas.fillStyle = gradient;
-      this.canvas.fillRect(0, y, xGap - 15, 10);
-      return this.canvas.fillRect(xGap + 15, y, this.canvas.size.x, 10);
+      this.canvas.fillRect(0, y, xGap - 25, 10);
+      return this.canvas.fillRect(xGap + 25, y, this.canvas.size.x, 10);
     };
 
     Renderer.drawBackground = function() {
-      this.canvas.fillStyle = "f6f6f6";
+      this.canvas.fillStyle = "#f6f6f6";
       return this.canvas.fillRect(0, 0, this.canvas.size.x, this.canvas.size.y);
     };
 
     Renderer.drawShadows = function() {
       var gradient;
-      gradient = this.canvas.createLinearGradient(0, 0, 0, 50);
-      gradient.addColorStop(0, "rgba(506, 506, 506, 1)");
-      gradient.addColorStop(1, "rgba(506, 506, 506, 0)");
+      gradient = this.canvas.createLinearGradient(0, 0, 0, this.canvas.size.y);
+      gradient.addColorStop(0, "rgba(256, 256, 256, 1)");
+      gradient.addColorStop(50 / this.canvas.size.y, "rgba(256, 256, 256, 0)");
+      gradient.addColorStop((this.canvas.size.y - 50) / this.canvas.size.y, "rgba(256, 256, 256, 0)");
+      gradient.addColorStop(1, "rgba(256, 256, 256, 1)");
       this.canvas.fillStyle = gradient;
-      this.canvas.fillRect(0, 0, this.canvas.size.x, 50);
-      gradient = this.canvas.createLinearGradient(0, this.canvas.size.y - 50, 0, this.canvas.size.y);
-      gradient.addColorStop(0, "rgba(506, 506, 506, 0)");
-      gradient.addColorStop(1, "rgba(506, 506, 506, 1)");
+      this.canvas.fillRect(0, 0, this.canvas.size.x, this.canvas.size.y);
+      gradient = this.canvas.createLinearGradient(0, 0, this.canvas.size.x, 0);
+      gradient.addColorStop(0, "rgba(256, 256, 256, 1)");
+      gradient.addColorStop(50 / this.canvas.size.y, "rgba(256, 256, 256, 0)");
+      gradient.addColorStop((this.canvas.size.y - 50) / this.canvas.size.y, "rgba(256, 256, 256, 0)");
+      gradient.addColorStop(1, "rgba(256, 256, 256, 1)");
       this.canvas.fillStyle = gradient;
-      this.canvas.fillRect(0, this.canvas.size.y - 50, this.canvas.size.x, this.canvas.size.y);
-      gradient = this.canvas.createLinearGradient(0, 0, 50, 0);
-      gradient.addColorStop(0, "rgba(506, 506, 506, 1)");
-      gradient.addColorStop(1, "rgba(506, 506, 506, 0)");
-      this.canvas.fillStyle = gradient;
-      this.canvas.fillRect(0, 0, 50, this.canvas.size.y);
-      gradient = this.canvas.createLinearGradient(this.canvas.size.x - 50, 0, this.canvas.size.x, 0);
-      gradient.addColorStop(0, "rgba(506, 506, 506, 0)");
-      gradient.addColorStop(1, "rgba(506, 506, 506, 1)");
-      this.canvas.fillStyle = gradient;
-      return this.canvas.fillRect(this.canvas.size.x - 50, 0, this.canvas.size.x, this.canvas.size.y);
+      return this.canvas.fillRect(0, 0, this.canvas.size.x, this.canvas.size.y);
     };
 
     return Renderer;
@@ -1160,22 +1477,19 @@ Dual licensed under the MIT and GPL licenses.
 
   window._r = Renderer;
 
-  activated = false;
-
-  offset = 0;
-
   module.exports = function() {
-    switch (activated) {
-      case false:
-        Renderer.proxy(Renderer.activate, Renderer)();
-        return activated = true;
-      case true:
-        return Renderer.proxy(Renderer.getCanvasSize, Renderer)();
+    var args, what;
+    what = arguments[0], args = 2 <= arguments.length ? __slice.call(arguments, 1) : [];
+    switch (what) {
+      case "activate":
+        return Renderer.activate.apply(Renderer, args);
+      case "canvasUpdate":
+        return Renderer.getCanvasSize.apply(Renderer);
     }
   };
 
 }).call(this);
-}, "styles/base": function(exports, require, module) {s = document.createElement('style'); s.innerHTML = "html,\nbody {\n  margin: 0;\n  padding: 0;\n  font-size: 10pt;\n  height: 100%;\n  width: 100%;\n}\nbody {\n  overflow: hidden;\n  background: white;\n  color: #444;\n}\nbody form {\n  position: fixed;\n  left: 50%;\n  top: 50%;\n  height: 200px;\n  width: 400px;\n  margin: -100px 0 0 -200px;\n  background: #ccc;\n  background: -webkit-gradient(linear, left top, left bottom, color-stop(0.5, #ffffff), color-stop(1, #eeeeee));\n  border-radius: 20px;\n}\nbody form label {\n  font-size: 17pt;\n  display: block;\n  clear: both;\n  text-align: center;\n  margin: 20px 0 40px;\n}\nbody form input {\n  display: block;\n  margin: 0 30px;\n  width: 310px;\n  height: 20px;\n  padding: 15px;\n  background: transparent;\n  border: solid 1px #ccc;\n  border-radius: 5px;\n  outline: none;\n  -webkit-transition: all 0.5s ease-in-out;\n}\nbody form input:hover,\nbody form input:active,\nbody form input:focus {\n  background: rgba(256, 256, 256, 0.8);\n}\nsection {\n  width: 900px;\n  margin: 0 auto;\n  height: 100%;\n}\nsection article {\n  width: 150px;\n  float: left;\n  padding: 50px 25px;\n  height: 100%;\n}\nsection article h1 {\n  font-size: 21pt;\n}\nsection article#playerInfoZone {\n  text-align: right;\n}\nsection article#renderZone {\n  width: 500px;\n  padding: 0;\n}\nsection article#renderZone canvas {\n  width: 100%;\n  height: 100%;\n}\nsection article#menuZone li {\n  list-style: none;\n  font-size: 16pt;\n  color: #ccc;\n  -webkit-transition: all 0.25s ease-in-out;\n  cursor: pointer;\n}\nsection article#menuZone li:hover {\n  color: #222;\n}\n"; s.id = "css-base"; document.head.appendChild(s);}, "views/game": function(exports, require, module) {module.exports = function(__obj) {
+}, "styles/base": function(exports, require, module) {s = document.createElement('style'); s.innerHTML = "html,\nbody {\n  margin: 0;\n  padding: 0;\n  font-size: 10pt;\n  height: 100%;\n  width: 100%;\n  font-family: \"Open Sans\", \"Helvetica Neue\";\n  font-weight: 100;\n}\nbody {\n  overflow: hidden;\n  background: white;\n  color: #444;\n}\nbody form {\n  position: fixed;\n  left: 50%;\n  top: 50%;\n  height: 200px;\n  width: 400px;\n  margin: -100px 0 0 -200px;\n  background: #ccc;\n  background: -webkit-gradient(linear, left top, left bottom, color-stop(0.5, #ffffff), color-stop(1, #eeeeee));\n  border-radius: 20px;\n}\nbody form label {\n  font-size: 17pt;\n  display: block;\n  clear: both;\n  text-align: center;\n  margin: 20px 0 40px;\n}\nbody form input {\n  display: block;\n  margin: 0 30px;\n  width: 310px;\n  height: 20px;\n  padding: 15px;\n  background: transparent;\n  border: solid 1px #ccc;\n  border-radius: 5px;\n  outline: none;\n  -webkit-transition: all 0.5s ease-in-out;\n}\nbody form input:hover,\nbody form input:active,\nbody form input:focus {\n  background: rgba(256, 256, 256, 0.8);\n}\nsection {\n  width: 900px;\n  margin: 0 auto;\n  height: 100%;\n}\nsection article {\n  width: 150px;\n  float: left;\n  padding: 50px 25px;\n  height: 100%;\n}\nsection article h1 {\n  font-size: 21pt;\n}\nsection article#playerInfoZone {\n  text-align: right;\n}\nsection article#renderZone {\n  width: 500px;\n  padding: 0;\n}\nsection article#renderZone canvas {\n  width: 100%;\n  height: 100%;\n}\nsection article#menuZone li {\n  list-style: none;\n  font-size: 16pt;\n  color: #ccc;\n  -webkit-transition: all 0.25s ease-in-out;\n  cursor: pointer;\n}\nsection article#menuZone li:hover {\n  color: #222;\n}\n"; s.id = "css-base"; document.head.appendChild(s);}, "views/game": function(exports, require, module) {module.exports = function(__obj) {
   if (!__obj) __obj = {};
   var __out = [], __capture = function(callback) {
     var out = __out, result;
@@ -1214,12 +1528,41 @@ Dual licensed under the MIT and GPL licenses.
   }
   (function() {
     (function() {
+      var color, values, _ref;
     
       __out.push('<section>\n\t<article id="playerInfoZone">\n\t\t<h1 id="playerName">');
     
       __out.push(__sanitize(this.name));
     
-      __out.push('</h1>\n\t\t<h4 id="sessionScore"></h4>\n\t</article>\n\t<article id="renderZone"><canvas id="gameCanvas"></canvas></article>\n\t<article id="menuZone">\n\t\t\t<h1>Menu</h1>\n\t\t\t<nav id="menuList">\n\t\t\t\t<li class="menuButton" id="newGameButton">New Game</li>\n\t\t\t\t<li class="menuButton" id="resetScoreButton">Reset Score</li>\n\t\t\t\t<li class="menuButton" id="pauseGameButton">Pause Game</li>\n\t\t\t\t<li class="menuButton" id="exitGameButton">Exit Game</li>\n\t\t\t</nav>\n\t</article>\n</section>\n');
+      __out.push('</h1>\n\t\t<h4 id="sessionScore"></h4>\n\t</article>\n\t<article id="renderZone"><canvas id="gameCanvas"></canvas></article>\n\t<article id="menuZone">\n\t\t\t<h1>Menu</h1>\n\t\t\t<nav id="menuList">\n\t\t\t\t<li class="menuButton" id="newGameButton">New Game</li>\n\t\t\t\t<li class="menuButton" id="resetScoreButton">Reset Score</li>\n\t\t\t\t<li class="menuButton" id="pauseGameButton">Pause Game</li>\n\t\t\t\t<li class="menuButton" id="exitGameButton">Exit Game</li>\n\t\t\t\t<br />\n\t\t\t\t<br />\n\t\t\t\t<li id="devOptions" class="menuButton">\n\t\t\t\t\t<select id="ballColors" name="ballColors">\n\t\t\t\t\t\t');
+    
+      _ref = this.colors;
+      for (color in _ref) {
+        values = _ref[color];
+        __out.push('\n\t\t\t\t\t\t<option value="');
+        __out.push(__sanitize(color));
+        __out.push('" ');
+        if (color === "red") {
+          __out.push(__sanitize("selected"));
+        }
+        __out.push('>');
+        __out.push(__sanitize(color.substr(0, 1).toUpperCase() + color.substr(1)));
+        __out.push('</option>\n\t\t\t\t\t\t');
+      }
+    
+      __out.push('\n\t\t\t\t\t</select>\n\t\t\t\t\t<input id="speedControl" type="number" value="');
+    
+      __out.push(__sanitize(this.baseSpeed));
+    
+      __out.push('" />\n\t\t\t\t\t<input id="frequencyControl" type="number" value="');
+    
+      __out.push(__sanitize(this.baseFrequency));
+    
+      __out.push('" />\n\t\t\t\t\t<input id="filterControl" type="number" step="0.1" value="');
+    
+      __out.push(__sanitize(this.baseFilter));
+    
+      __out.push('" />\n\t\t\t\t</li>\n\t\t\t</nav>\n\t</article>\n</section>\n');
     
     }).call(this);
     
