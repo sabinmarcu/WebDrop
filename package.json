@@ -18,6 +18,10 @@
 	"devDependencies" :  {
 		"jasmine-node" :  "*"
 	},
+	"engines": {
+		"node": ">=0.6.16",
+		"npm": ">=1.1.19"
+	},
 	"scripts" :  {
 		"create-dir-structure" :  "mkdir lib src spec bin",
 		"compile" :  "node node_modules/.bin/coffee -c -o lib src",
